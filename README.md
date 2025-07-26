@@ -9,7 +9,7 @@ Create a functional and deployable Drosera trap that:
 
 - Uses the standard collect() / shouldRespond() interface,
 
-- Triggers a response when balance deviation exceeds a given threshold (e.g., 1%),
+- Triggers a response when balance deviation exceeds a given threshold (e.g., 1~10%),
 
 - Integrates with a separate alert contract to handle responses.
 ---
@@ -26,40 +26,44 @@ Solution: _Monitor ETH balance of a wallet across blocks. Trigger a response if 
 
 _Trap Contract: BalanceAnomalyTrap.sol_
 
-_Pay attention to this string "address public constant target = 0xABcDEF1234567890abCDef1234567890AbcDeF12; // change 0xABcDEF1234567890abCDef1234567890AbcDeF12 to your own wallet address"_
+_Pay attention to this string "address public constant target = 0x03Bf5F9d497354c68d1DD70578677353357A1918; // change 0x03Bf5F9d497354c68d1DD70578677353357A1918 to your own wallet address"_
 ```
-// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
 interface ITrap {
-    function collect() external returns (bytes memory);
-    function shouldRespond(bytes[] calldata data) external view returns (bool, bytes memory);
+    function collect() external view returns (bytes memory);
+    function shouldRespond(bytes[] calldata data) external pure returns (bool, bytes memory);
 }
 
-contract BalanceAnomalyTrap is ITrap {
-    address public constant target = 0xABcDEF1234567890abCDef1234567890AbcDeF12; // change 0xABcDEF1234567890abCDef1234567890AbcDeF12 to your own wallet address
-    uint256 public constant thresholdPercent = 1;
+contract EthOutflowTrap is ITrap {
+    address public constant target = 0x03Bf5F9d497354c68d1DD70578677353357A1918;
+    uint256 public constant thresholdPercent = 10;
 
-    function collect() external override returns (bytes memory) {
+    function collect() external view override returns (bytes memory) {
         return abi.encode(target.balance);
     }
 
-    function shouldRespond(bytes[] calldata data) external view override returns (bool, bytes memory) {
+    function shouldRespond(bytes[] calldata data) external pure override returns (bool, bytes memory) {
         if (data.length < 2) return (false, "Insufficient data");
 
         uint256 current = abi.decode(data[0], (uint256));
         uint256 previous = abi.decode(data[1], (uint256));
 
-        uint256 diff = current > previous ? current - previous : previous - current;
-        uint256 percent = (diff * 100) / previous;
+        if (current >= previous) {
+            return (false, "");
+        }
 
-        if (percent >= thresholdPercent) {
+        uint256 diff = previous - current;
+        uint256 percentDrop = (diff * 100) / previous;
+
+        if (percentDrop >= thresholdPercent) {
             return (true, "");
         }
 
         return (false, "");
     }
 }
+    
 ```
 
 # Response Contract: LogAlertReceiver.sol
@@ -67,11 +71,26 @@ contract BalanceAnomalyTrap is ITrap {
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-contract LogAlertReceiver {
-    event Alert(string message);
+contract TrapAlertReceiver {
+    event AnomalyDetected(
+        address indexed reporter,
+        address indexed wallet,
+        string reason,
+        uint256 value
+    );
 
-    function logAnomaly(string calldata message) external {
-        emit Alert(message);
+    /**
+     * @notice Called by the trap to report an anomaly.
+     * @param wallet The wallet address where the anomaly was detected.
+     * @param reason A short description of the anomaly.
+     * @param value Optional numeric value (e.g. % drop, token balance, etc).
+     */
+    function reportAnomaly(
+        address wallet,
+        string calldata reason,
+        uint256 value
+    ) external {
+        emit AnomalyDetected(msg.sender, wallet, reason, value);
     }
 }
 ```
@@ -84,6 +103,10 @@ contract LogAlertReceiver {
 - Provides an automated alerting mechanism,
 
 - Can integrate with automation logic (e.g., freezing funds, emergency DAO alerts).
+
+- Receives data from the trap (e.g., wallet address, reason text, numeric value).
+
+Emits an event AnomalyDetected that can be tracked via logs.
 
 ---
 
