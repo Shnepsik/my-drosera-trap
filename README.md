@@ -112,7 +112,7 @@ response_function = "logAnomaly(string)"
 DROSERA_PRIVATE_KEY=0x... drosera apply
 ```
 
-<img width="547" height="354" alt="{F13A1A68-C0D0-4DFE-AF0B-03BA506B3899}" src="https://github.com/user-attachments/assets/e4ad73d9-5d32-4b65-9803-41c9872d3e4c" />
+<img width="547" height="354" alt="{F13A1A68-C0D0-4DFE-AF0B-03BA506B3899}" src="https://github.com/Shnepsik/my-drosera-trap/blob/main/%D0%A1%D0%BD%D0%B8%D0%BC%D0%BE%D0%BA%20%D1%8D%D0%BA%D1%80%D0%B0%D0%BD%D0%B0%202025-07-26%20%D0%B2%2016.40.11.png?raw=true" />
 
 
 # Testing the Trap 
